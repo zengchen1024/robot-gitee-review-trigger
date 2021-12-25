@@ -9,18 +9,33 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// TODO: set botName
-const botName = ""
+const botName = "review-trigger"
 
-type iClient interface {
+func newRobot(cli iClient, botName string) *robot {
+	return &robot{
+		client:  ghclient{cli},
+		botName: botName,
+	}
 }
 
-func newRobot(cli iClient) *robot {
-	return &robot{cli: cli}
+type iClient interface {
+	AddPRLabel(owner, repo string, number int32, label string) error
+	AddMultiPRLabel(org, repo string, number int32, label []string) error
+	RemovePRLabel(owner, repo string, number int32, label string) error
+	RemovePRLabels(org, repo string, number int32, labels []string) error
+	GetPRCommit(org, repo, SHA string) (sdk.RepoCommit, error)
+	ListPRComments(org, repo string, number int32) ([]sdk.PullRequestComments, error)
+	GetPRLabels(org, repo string, number int32) ([]sdk.Label, error)
+	CreatePRComment(owner, repo string, number int32, comment string) error
+	DeletePRComment(org, repo string, ID int32) error
+	UpdatePRComment(org, repo string, commentID int32, comment string) error
+	GetPullRequestChanges(org, repo string, number int32) ([]sdk.PullRequestFiles, error)
+	ListCollaborators(org, repo string) ([]sdk.ProjectMember, error)
 }
 
 type robot struct {
-	cli iClient
+	botName string
+	client  ghclient
 }
 
 func (bot *robot) NewConfig() config.Config {
@@ -35,28 +50,34 @@ func (bot *robot) getConfig(cfg config.Config) (*configuration, error) {
 }
 
 func (bot *robot) RegisterEventHandler(f framework.HandlerRegitster) {
-	f.RegisterIssueHandler(bot.handleIssueEvent)
 	f.RegisterPullRequestHandler(bot.handlePREvent)
 	f.RegisterNoteEventHandler(bot.handleNoteEvent)
-	f.RegisterPushEventHandler(bot.handlePushEvent)
 }
 
 func (bot *robot) handlePREvent(e *sdk.PullRequestEvent, c config.Config, log *logrus.Entry) error {
-	// TODO: if it doesn't needd to hand PR event, delete this function.
-	return nil
-}
+	cfg, err := bot.getConfig(c)
+	if err != nil {
+		return err
+	}
 
-func (bot *robot) handleIssueEvent(e *sdk.IssueEvent, c config.Config, log *logrus.Entry) error {
-	// TODO: if it doesn't needd to hand Issue event, delete this function.
-	return nil
-}
+	bc := cfg.configFor(e.GetOrgRepo())
+	if bc == nil {
+		return nil
+	}
 
-func (bot *robot) handlePushEvent(e *sdk.PushEvent, c config.Config, log *logrus.Entry) error {
-	// TODO: if it doesn't needd to hand Push event, delete this function.
-	return nil
+	return bot.handlePREvent1(e, bc, log)
 }
 
 func (bot *robot) handleNoteEvent(e *sdk.NoteEvent, c config.Config, log *logrus.Entry) error {
-	// TODO: if it doesn't needd to hand Note event, delete this function.
-	return nil
+	cfg, err := bot.getConfig(c)
+	if err != nil {
+		return err
+	}
+
+	bc := cfg.configFor(e.GetOrgRepo())
+	if bc == nil {
+		return nil
+	}
+
+	return bot.handleNoteEvent1(e, bc, log)
 }
