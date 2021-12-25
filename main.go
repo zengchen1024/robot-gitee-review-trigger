@@ -47,12 +47,13 @@ func main() {
 	if err := secretAgent.Start([]string{o.gitee.TokenPath}); err != nil {
 		logrus.WithError(err).Fatal("Error starting secret agent.")
 	}
-	
+
 	defer secretAgent.Stop()
 
 	c := giteeclient.NewClient(secretAgent.GetTokenGenerator(o.gitee.TokenPath))
 
-	r := newRobot(c)
+	// TODO
+	r := newRobot(c, "")
 
 	framework.Run(r, o.service)
 }
