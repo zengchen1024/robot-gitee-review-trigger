@@ -4,10 +4,10 @@ import (
 	"time"
 
 	sdk "github.com/opensourceways/go-gitee/gitee"
+	"github.com/opensourceways/repo-owners-cache/repoowners"
 	"github.com/sirupsen/logrus"
 
 	"github.com/opensourceways/robot-gitee-review-trigger/plugins"
-	"github.com/opensourceways/robot-gitee-review-trigger/repoowners"
 )
 
 func (rt *robot) genRepoOwner(org, repo, branch string, cfg ownerConfig, log *logrus.Entry) (repoowners.RepoOwner, error) {
@@ -19,7 +19,15 @@ func (rt *robot) genRepoOwner(org, repo, branch string, cfg ownerConfig, log *lo
 		return repoowners.RepoMemberAsOwners(cs), nil
 	}
 
-	return repoowners.NewRepoOwners(org, repo, branch, nil, log), nil
+	return repoowners.NewRepoOwners(
+		repoowners.RepoBranch{
+			Platform: "gitee",
+			Org:      org,
+			Repo:     repo,
+			Branch:   branch,
+		},
+		nil,
+	)
 }
 
 func (rt *robot) genPullRequest(prInfo iPRInfo, assignees []string, owner repoowners.RepoOwner) (pullRequest, error) {

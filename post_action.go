@@ -1,10 +1,10 @@
 package main
 
 import (
+	"github.com/opensourceways/repo-owners-cache/repoowners"
 	"github.com/sirupsen/logrus"
 
 	"github.com/opensourceways/robot-gitee-review-trigger/plugins"
-	"github.com/opensourceways/robot-gitee-review-trigger/repoowners"
 )
 
 type PostAction struct {

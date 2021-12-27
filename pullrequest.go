@@ -3,7 +3,7 @@ package main
 import (
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	"github.com/opensourceways/robot-gitee-review-trigger/repoowners"
+	"github.com/opensourceways/repo-owners-cache/repoowners"
 )
 
 func newPullRequest(pr iPRInfo, files, assignees []string, owner repoowners.RepoOwner) pullRequest {

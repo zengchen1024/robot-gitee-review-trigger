@@ -4,10 +4,9 @@ import (
 	"math/rand"
 	"sort"
 
+	"github.com/opensourceways/repo-owners-cache/repoowners"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/sets"
-
-	"github.com/opensourceways/robot-gitee-review-trigger/repoowners"
 )
 
 func suggestReviewers(
