@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/opensourceways/community-robot-lib/giteeclient"
 	sdk "github.com/opensourceways/go-gitee/gitee"
 	"github.com/sirupsen/logrus"
-
-	"github.com/opensourceways/robot-gitee-review-trigger/plugins"
 )
 
 type prInfoOnPREvent struct {
@@ -37,42 +36,42 @@ func (pr prInfoOnPREvent) getHeadSHA() string {
 	return pr.e.GetPRHeadSha()
 }
 
-func (rt *robot) handlePREvent1(e *sdk.PullRequestEvent, cfg *botConfig, log *logrus.Entry) error {
+func (bot *robot) processPREvent(e *sdk.PullRequestEvent, cfg *botConfig, log *logrus.Entry) error {
 	canReview := cfg.CI.NoCI
 
 	switch sdk.GetPullRequestAction(e) {
-	case sdk.ActionOpen:
+	case sdk.PRActionOpened:
 		mr := multiError()
 		pr := prInfoOnPREvent{e}
 
 		if cfg.NeedWelcome {
-			if err := rt.welcome(pr, cfg.Doc); err != nil {
+			if err := bot.welcome(pr, cfg); err != nil {
 				mr.Add(fmt.Sprintf("add welcome comment, err:%s", err.Error()))
 			}
 		}
 
 		if canReview {
-			if err := rt.readyToReview(pr, cfg, log); err != nil {
+			if err := bot.readyToReview(pr, cfg, log); err != nil {
 				mr.AddError(err)
 			}
 		}
 		return mr.Err()
 
 	case sdk.PRActionChangedSourceBranch:
-		toKeep := []string{}
+		var toKeep []string
 		if canReview {
 			toKeep = append(toKeep, labelCanReview)
 		}
-		return rt.resetToReview(prInfoOnPREvent{e}, cfg, toKeep, log)
+		return bot.resetToReview(prInfoOnPREvent{e}, cfg, toKeep, log)
 	}
 
 	return nil
 }
 
-func (rt *robot) welcome(pr iPRInfo, doc string) error {
+func (bot *robot) welcome(pr iPRInfo, cfg *botConfig) error {
 	org, repo := pr.getOrgAndRepo()
 
-	return rt.client.CreatePRComment(
+	return bot.client.CreatePRComment(
 		org, repo, pr.getNumber(),
 		fmt.Sprintf(
 			`
@@ -82,44 +81,44 @@ The full list of commands accepted by me can be found at [**here**](%s).
 
 %s
 `,
-			"",
-			doc,
+			cfg.commandsEndpoint,
+			cfg.doc,
 		),
 	)
 }
 
-func (rt *robot) readyToReview(pr iPRInfo, cfg *botConfig, log *logrus.Entry) error {
+func (bot *robot) readyToReview(pr iPRInfo, cfg *botConfig, log *logrus.Entry) error {
 	mr := multiError()
 
-	if err := rt.addLabelOfCanReview(pr); err != nil {
+	if err := bot.addLabelOfCanReview(pr); err != nil {
 		mr.AddError(err)
 	}
 
-	if err := rt.addReviewNotification(pr, cfg, log); err != nil {
+	if err := bot.addReviewNotification(pr, cfg, log); err != nil {
 		mr.AddError(err)
 	}
 
 	return mr.Err()
 }
 
-func (rt *robot) addLabelOfCanReview(pr iPRInfo) error {
+func (bot *robot) addLabelOfCanReview(pr iPRInfo) error {
 	l := labelCanReview
 	if pr.hasLabel(l) {
 		return nil
 	}
 
 	org, repo := pr.getOrgAndRepo()
-	return rt.client.AddPRLabel(org, repo, pr.getNumber(), l)
+	return bot.client.AddPRLabel(org, repo, pr.getNumber(), l)
 }
 
-func (rt *robot) addReviewNotification(pr iPRInfo, cfg *botConfig, log *logrus.Entry) error {
+func (bot *robot) addReviewNotification(pr iPRInfo, cfg *botConfig, log *logrus.Entry) error {
 	org, repo := pr.getOrgAndRepo()
-	owner, err := rt.genRepoOwner(org, repo, pr.getTargetBranch(), cfg.Owner, log)
+	owner, err := bot.genRepoOwner(org, repo, pr.getTargetBranch(), cfg.Owner, log)
 	if err != nil {
 		return err
 	}
 
-	reviewers, err := suggestReviewers(rt.client, owner, pr, cfg.Review.TotalNumberOfReviewers, log)
+	reviewers, err := suggestReviewers(bot.client, owner, pr, cfg.Review.TotalNumberOfReviewers, log)
 	if err != nil {
 		return fmt.Errorf("suggest reviewers, err: %s", err.Error())
 	}
@@ -128,31 +127,31 @@ func (rt *robot) addReviewNotification(pr iPRInfo, cfg *botConfig, log *logrus.E
 		return nil
 	}
 
-	s := newNotificationComment(&reviewSummary{}, "", rt.botName).startReviewComment(reviewers)
+	s := newNotificationComment(&reviewSummary{}, "", bot.botName).startReviewComment(reviewers)
 
-	return rt.client.CreatePRComment(org, repo, pr.getNumber(), s)
+	return bot.client.CreatePRComment(org, repo, pr.getNumber(), s)
 }
 
-func (rt *robot) resetToReview(pr iPRInfo, cfg *botConfig, toKeep []string, log *logrus.Entry) error {
+func (bot *robot) resetToReview(pr iPRInfo, cfg *botConfig, toKeep []string, log *logrus.Entry) error {
 	mr := multiError()
 
-	if err := rt.resetLabels(pr, cfg, toKeep); err != nil {
+	if err := bot.resetLabels(pr, cfg, toKeep); err != nil {
 		mr.Add(fmt.Sprintf("remove label when source code changed, err:%s", err.Error()))
 	}
 
-	if err := rt.deleteReviewNotifiction(pr); err != nil {
+	if err := bot.deleteReviewNotification(pr); err != nil {
 		mr.Add(fmt.Sprintf("delete tips, err:%s", err.Error()))
 	}
 
-	if err := rt.addReviewNotification(pr, cfg, log); err != nil {
+	if err := bot.addReviewNotification(pr, cfg, log); err != nil {
 		mr.AddError(err)
 	}
 
 	return mr.Err()
 }
 
-func (rt *robot) resetLabels(pr iPRInfo, cfg *botConfig, toKeep []string) error {
-	rmls, err := updateAndReturnRemovedLabels(rt.client, pr, toKeep...)
+func (bot *robot) resetLabels(pr iPRInfo, cfg *botConfig, toKeep []string) error {
+	rmls, err := updateAndReturnRemovedLabels(bot.client, pr, toKeep...)
 	if err != nil {
 		return err
 	}
@@ -160,7 +159,7 @@ func (rt *robot) resetLabels(pr iPRInfo, cfg *botConfig, toKeep []string) error 
 	if len(rmls) > 0 {
 		org, repo := pr.getOrgAndRepo()
 
-		rt.client.CreatePRComment(
+		_ = bot.client.CreatePRComment(
 			org, repo, pr.getNumber(), fmt.Sprintf(
 				"New changes are detected. Remove the following labels: %s.",
 				strings.Join(rmls, ", "),
@@ -171,17 +170,18 @@ func (rt *robot) resetLabels(pr iPRInfo, cfg *botConfig, toKeep []string) error 
 	return nil
 }
 
-func (rt *robot) deleteReviewNotifiction(pr iPRInfo) error {
+func (bot *robot) deleteReviewNotification(pr iPRInfo) error {
 	org, repo := pr.getOrgAndRepo()
 
-	comments, err := rt.client.ListPRComments(org, repo, pr.getNumber())
+	comments, err := bot.client.ListPRComments(org, repo, pr.getNumber())
 	if err != nil {
 		return err
 	}
 
-	cs := plugins.FindBotComment(comments, rt.botName, isNotificationComment)
+	cs := giteeclient.FindBotComment(comments, bot.botName, isNotificationComment)
 	for _, c := range cs {
-		rt.client.DeletePRComment(org, repo, c.CommentID)
+		_ = bot.client.DeletePRComment(org, repo, c.CommentID)
 	}
+
 	return nil
 }

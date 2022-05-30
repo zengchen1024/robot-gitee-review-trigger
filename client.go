@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"time"
 
 	sdk "github.com/opensourceways/go-gitee/gitee"
@@ -59,5 +60,5 @@ func getAssignees(pr *sdk.PullRequestHook) []string {
 }
 
 func normalizeLogin(s string) string {
-	return s
+	return strings.TrimPrefix(strings.ToLower(s), "@")
 }

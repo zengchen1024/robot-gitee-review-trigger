@@ -1,10 +1,9 @@
 package main
 
 import (
+	"github.com/opensourceways/community-robot-lib/giteeclient"
 	"github.com/opensourceways/repo-owners-cache/repoowners"
 	"github.com/sirupsen/logrus"
-
-	"github.com/opensourceways/robot-gitee-review-trigger/plugins"
 )
 
 type PostAction struct {
@@ -27,7 +26,7 @@ type actionParameter struct {
 	needLGTMNum       int
 }
 
-func (pa PostAction) do(oldComments []plugins.BotComment, lastComment string, rs reviewSummary, r reviewResult, botName string) error {
+func (pa PostAction) do(oldComments []giteeclient.BotComment, lastComment string, rs reviewSummary, r reviewResult, botName string) error {
 	if rs.IsEmpty() {
 		return nil
 	}
@@ -35,7 +34,7 @@ func (pa PostAction) do(oldComments []plugins.BotComment, lastComment string, rs
 	oldTips := ""
 	if i := len(oldComments); i > 0 {
 		if i > 1 {
-			plugins.SortBotComments(oldComments)
+			giteeclient.SortBotComments(oldComments)
 		}
 		oldTips = oldComments[i-1].Body
 	}

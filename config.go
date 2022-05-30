@@ -8,6 +8,12 @@ import (
 
 type configuration struct {
 	ConfigItems []botConfig `json:"config_items,omitempty"`
+
+	// CommandsEndpoint is the endpoint which enumerates the usage of commands.
+	CommandsEndpoint string `json:"commands_endpoint" required:"true"`
+
+	// Doc describes useful information about review process of PR.
+	Doc string `json:"doc" required:"true"`
 }
 
 func (c *configuration) configFor(org, repo string) *botConfig {
@@ -22,6 +28,9 @@ func (c *configuration) configFor(org, repo string) *botConfig {
 	}
 
 	if i := config.Find(org, repo, v); i >= 0 {
+		items[i].doc = c.Doc
+		items[i].commandsEndpoint = c.CommandsEndpoint
+
 		return &items[i]
 	}
 
@@ -31,6 +40,14 @@ func (c *configuration) configFor(org, repo string) *botConfig {
 func (c *configuration) Validate() error {
 	if c == nil {
 		return nil
+	}
+
+	if c.CommandsEndpoint == "" {
+		return fmt.Errorf("missing commands_endpoint")
+	}
+
+	if c.Doc == "" {
+		return fmt.Errorf("missing doc")
 	}
 
 	items := c.ConfigItems
@@ -66,8 +83,8 @@ type botConfig struct {
 	// NeedWelcome specifies whether to add welcome comment.
 	NeedWelcome bool `json:"need_welcome,omitempty"`
 
-	// Doc describes useful information about review process of PR.
-	Doc string `json:"doc,omitempty"`
+	doc              string `json:"-"`
+	commandsEndpoint string `json:"-"`
 }
 
 func (c *botConfig) setDefault() {
@@ -93,10 +110,6 @@ func (c *botConfig) validate() error {
 
 	if err := c.Owner.validate(); err != nil {
 		return err
-	}
-
-	if c.NeedWelcome && c.Doc == "" {
-		return fmt.Errorf("missing doc")
 	}
 
 	return c.RepoFilter.Validate()

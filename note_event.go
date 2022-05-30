@@ -9,29 +9,29 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (rt *robot) handleNoteEvent1(e *sdk.NoteEvent, cfg *botConfig, log *logrus.Entry) error {
+func (bot *robot) processNoteEvent(e *sdk.NoteEvent, cfg *botConfig, log *logrus.Entry) error {
 	if !e.IsPullRequest() || !e.IsPROpen() {
 		return nil
 	}
 
-	if e.IsCreatingCommentEvent() && e.GetCommenter() != rt.botName {
+	if e.IsCreatingCommentEvent() && e.GetCommenter() != bot.botName {
 		if cmds := parseReviewCommand(e.GetComment().GetBody()); len(cmds) > 0 {
-			return rt.handleReviewComment(e, cfg, log)
+			return bot.handleReviewComment(e, cfg, log)
 		}
 	}
 
-	return rt.handleCIStatusComment(e, cfg, log)
+	return bot.handleCIStatusComment(e, cfg, log)
 }
 
-func (rt *robot) handleReviewComment(e *sdk.NoteEvent, cfg *botConfig, log *logrus.Entry) error {
+func (bot *robot) handleReviewComment(e *sdk.NoteEvent, cfg *botConfig, log *logrus.Entry) error {
 	org, repo := e.GetOrgRepo()
-	owner, err := rt.genRepoOwner(org, repo, e.GetPRBaseRef(), cfg.Owner, log)
+	owner, err := bot.genRepoOwner(org, repo, e.GetPRBaseRef(), cfg.Owner, log)
 	if err != nil {
 		return err
 	}
 
 	prInfo := prInfoOnNoteEvent{e}
-	pr, err := rt.genPullRequest(prInfo, getAssignees(e.GetPullRequest()), owner)
+	pr, err := bot.genPullRequest(prInfo, getAssignees(e.GetPullRequest()), owner)
 	if err != nil {
 		return err
 	}
@@ -42,19 +42,19 @@ func (rt *robot) handleReviewComment(e *sdk.NoteEvent, cfg *botConfig, log *logr
 		reviewers: owner.AllReviewers(),
 	}
 
-	cmd, validReview := rt.isValidReview(stats, e, log)
+	cmd, validReview := bot.isValidReview(cfg.commandsEndpoint, stats, e, log)
 	if !validReview {
 		return nil
 	}
 
-	info, err := rt.getReviewInfo(prInfo)
+	info, err := bot.getReviewInfo(prInfo)
 	if err != nil {
 		return err
 	}
 
 	canReview := cfg.CI.NoCI || stats.pr.info.hasLabel(cfg.CI.LabelForCIPassed)
 	pa := PostAction{
-		c:                rt.client,
+		c:                bot.client,
 		cfg:              cfg,
 		owner:            owner,
 		log:              log,
@@ -62,12 +62,15 @@ func (rt *robot) handleReviewComment(e *sdk.NoteEvent, cfg *botConfig, log *logr
 		isStartingReview: canReview,
 	}
 
-	oldTips := info.reviewGuides(rt.botName)
-	rs, rr := info.doStats(stats, rt.botName)
-	return pa.do(oldTips, cmd, rs, rr, rt.botName)
+	oldTips := info.reviewGuides(bot.botName)
+	rs, rr := info.doStats(stats, bot.botName)
+
+	return pa.do(oldTips, cmd, rs, rr, bot.botName)
 }
 
-func (rt *robot) isValidReview(stats *reviewStats, e *sdk.NoteEvent, log *logrus.Entry) (string, bool) {
+func (bot *robot) isValidReview(
+	commandEndpoint string, stats *reviewStats, e *sdk.NoteEvent, log *logrus.Entry,
+) (string, bool) {
 	commenter := normalizeLogin(e.GetCommenter())
 
 	cmd, invalidCmd := getReviewCommand(e.GetComment().GetBody(), commenter, stats.genCheckCmdFunc())
@@ -89,10 +92,10 @@ func (rt *robot) isValidReview(stats *reviewStats, e *sdk.NoteEvent, log *logrus
 		s := fmt.Sprintf(
 			"You can't comment `/%s`. Please see the [*Command Usage*](%s) to get detail.",
 			strings.ToLower(invalidCmd),
-			"",
+			commandEndpoint,
 		)
 
-		rt.client.CreatePRComment(
+		bot.client.CreatePRComment(
 			org, repo, info.getNumber(),
 			giteeclient.GenResponseWithReference(e, s),
 		)

@@ -3,16 +3,15 @@ package main
 import (
 	"time"
 
+	"github.com/opensourceways/community-robot-lib/giteeclient"
 	sdk "github.com/opensourceways/go-gitee/gitee"
 	"github.com/opensourceways/repo-owners-cache/repoowners"
 	"github.com/sirupsen/logrus"
-
-	"github.com/opensourceways/robot-gitee-review-trigger/plugins"
 )
 
-func (rt *robot) genRepoOwner(org, repo, branch string, cfg ownerConfig, log *logrus.Entry) (repoowners.RepoOwner, error) {
+func (bot *robot) genRepoOwner(org, repo, branch string, cfg ownerConfig, log *logrus.Entry) (repoowners.RepoOwner, error) {
 	if cfg.IsBranchWithoutOwners(branch) {
-		cs, err := rt.client.listCollaborators(org, repo)
+		cs, err := bot.client.listCollaborators(org, repo)
 		if err != nil {
 			return nil, err
 		}
@@ -26,13 +25,13 @@ func (rt *robot) genRepoOwner(org, repo, branch string, cfg ownerConfig, log *lo
 			Repo:     repo,
 			Branch:   branch,
 		},
-		nil,
+		bot.cacheCli,
 	)
 }
 
-func (rt *robot) genPullRequest(prInfo iPRInfo, assignees []string, owner repoowners.RepoOwner) (pullRequest, error) {
+func (bot *robot) genPullRequest(prInfo iPRInfo, assignees []string, owner repoowners.RepoOwner) (pullRequest, error) {
 	org, repo := prInfo.getOrgAndRepo()
-	filenames, err := rt.client.getPullRequestChanges(org, repo, prInfo.getNumber())
+	filenames, err := bot.client.getPullRequestChanges(org, repo, prInfo.getNumber())
 	if err != nil {
 		return pullRequest{}, err
 	}
@@ -40,15 +39,15 @@ func (rt *robot) genPullRequest(prInfo iPRInfo, assignees []string, owner repoow
 	return newPullRequest(prInfo, filenames, assignees, owner), nil
 }
 
-func (rt *robot) getReviewInfo(info iPRInfo) (ri reviewInfo, err error) {
+func (bot *robot) getReviewInfo(info iPRInfo) (ri reviewInfo, err error) {
 	org, repo := info.getOrgAndRepo()
 
-	ri.comments, err = rt.client.ListPRComments(org, repo, info.getNumber())
+	ri.comments, err = bot.client.ListPRComments(org, repo, info.getNumber())
 	if err != nil {
 		return
 	}
 
-	ri.t, err = rt.client.getPRCodeUpdateTime(org, repo, info.getHeadSHA())
+	ri.t, err = bot.client.getPRCodeUpdateTime(org, repo, info.getHeadSHA())
 	return
 }
 
@@ -57,8 +56,8 @@ type reviewInfo struct {
 	t        time.Time
 }
 
-func (r reviewInfo) reviewGuides(botName string) []plugins.BotComment {
-	return plugins.FindBotComment(r.comments, botName, isNotificationComment)
+func (r reviewInfo) reviewGuides(botName string) []giteeclient.BotComment {
+	return giteeclient.FindBotComment(r.comments, botName, isNotificationComment)
 }
 
 func (r reviewInfo) doStats(s *reviewStats, botName string) (reviewSummary, reviewResult) {

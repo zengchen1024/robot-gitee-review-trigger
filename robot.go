@@ -6,15 +6,17 @@ import (
 	"github.com/opensourceways/community-robot-lib/config"
 	"github.com/opensourceways/community-robot-lib/robot-gitee-framework"
 	sdk "github.com/opensourceways/go-gitee/gitee"
+	"github.com/opensourceways/repo-owners-cache/grpc/client"
 	"github.com/sirupsen/logrus"
 )
 
 const botName = "review-trigger"
 
-func newRobot(cli iClient, botName string) *robot {
+func newRobot(cli iClient, cacheCli *client.Client, botName string) *robot {
 	return &robot{
-		client:  ghclient{cli},
-		botName: botName,
+		client:   ghclient{cli},
+		botName:  botName,
+		cacheCli: cacheCli,
 	}
 }
 
@@ -34,8 +36,9 @@ type iClient interface {
 }
 
 type robot struct {
-	botName string
-	client  ghclient
+	botName  string
+	client   ghclient
+	cacheCli *client.Client
 }
 
 func (bot *robot) NewConfig() config.Config {
@@ -65,7 +68,7 @@ func (bot *robot) handlePREvent(e *sdk.PullRequestEvent, c config.Config, log *l
 		return nil
 	}
 
-	return bot.handlePREvent1(e, bc, log)
+	return bot.processPREvent(e, bc, log)
 }
 
 func (bot *robot) handleNoteEvent(e *sdk.NoteEvent, c config.Config, log *logrus.Entry) error {
@@ -79,5 +82,5 @@ func (bot *robot) handleNoteEvent(e *sdk.NoteEvent, c config.Config, log *logrus
 		return nil
 	}
 
-	return bot.handleNoteEvent1(e, bc, log)
+	return bot.processNoteEvent(e, bc, log)
 }
