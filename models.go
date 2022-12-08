@@ -123,17 +123,32 @@ func genReviewSummary(cmds []reviewCommand) reviewSummary {
 	}
 }
 
-func getReviewCommand(comment, author string, isValidCmd func(cmd, author string) bool) (validCmd string, invalidCmd string) {
+func getReviewCommand(
+	comment, author string,
+	isValidCmd func(cmd, author string) bool,
+) (validCmd string, invalidCmd string) {
+
 	cmds := parseReviewCommand(comment)
 	if len(cmds) == 0 {
 		return
 	}
 
+	return checkReviewCommand(cmds, func(cmd string) bool {
+		return isValidCmd(cmd, author)
+	})
+
+}
+
+func checkReviewCommand(
+	cmds []string,
+	isValidCmd func(cmd string) bool,
+) (validCmd string, invalidCmd string) {
+
 	negatives := map[string]bool{}
 	positives := map[string]bool{}
 
 	for _, cmd := range cmds {
-		if !isValidCmd(cmd, author) {
+		if !isValidCmd(cmd) {
 			if invalidCmd == "" {
 				invalidCmd = cmd
 			}
@@ -153,6 +168,7 @@ func getReviewCommand(comment, author string, isValidCmd func(cmd, author string
 	if len(negatives) == 0 && positives[cmdAPPROVE] {
 		validCmd = cmdAPPROVE
 	}
+
 	return
 }
 

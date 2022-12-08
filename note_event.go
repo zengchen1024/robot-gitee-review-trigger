@@ -16,11 +16,16 @@ func (bot *robot) processNoteEvent(e *sdk.NoteEvent, cfg *botConfig, log *logrus
 	}
 
 	if e.IsCreatingCommentEvent() && e.GetCommenter() != bot.botName {
+		cmds := parseCommentCommands(e.GetComment().GetBody())
+		info := &noteEventInfo{
+			NoteEvent: e,
+			cmds:      sets.NewString(cmds...),
+		}
+
 		mr := multiError()
-		info := bot.newNoteEventInfo(e)
 
 		if info.hasReviewCmd() {
-			err := bot.handleReviewComment(e, cfg, log)
+			err := bot.handleReviewComment(info, cfg, log)
 			mr.AddError(err)
 		}
 
@@ -35,14 +40,14 @@ func (bot *robot) processNoteEvent(e *sdk.NoteEvent, cfg *botConfig, log *logrus
 	return bot.handleCIStatusComment(e, cfg, log)
 }
 
-func (bot *robot) handleReviewComment(e *sdk.NoteEvent, cfg *botConfig, log *logrus.Entry) error {
+func (bot *robot) handleReviewComment(e *noteEventInfo, cfg *botConfig, log *logrus.Entry) error {
 	org, repo := e.GetOrgRepo()
 	owner, err := bot.genRepoOwner(org, repo, e.GetPRBaseRef())
 	if err != nil {
 		return err
 	}
 
-	prInfo := prInfoOnNoteEvent{e}
+	prInfo := prInfoOnNoteEvent{e.NoteEvent}
 	pr, err := bot.genPullRequest(prInfo, getAssignees(e.GetPullRequest()), owner)
 	if err != nil {
 		return err
@@ -81,12 +86,11 @@ func (bot *robot) handleReviewComment(e *sdk.NoteEvent, cfg *botConfig, log *log
 }
 
 func (bot *robot) isValidReview(
-	commandEndpoint string, stats *reviewStats, e *sdk.NoteEvent, log *logrus.Entry,
+	commandEndpoint string, stats *reviewStats, e *noteEventInfo, log *logrus.Entry,
 ) (string, bool) {
-	commenter := normalizeLogin(e.GetCommenter())
+	cmd, invalidCmd := e.checkReviewCmd(stats.genCheckCmdFunc())
 
-	cmd, invalidCmd := getReviewCommand(e.GetComment().GetBody(), commenter, stats.genCheckCmdFunc())
-
+	commenter := e.normalizedCommenter()
 	validReview := cmd != "" && stats.isReviewer(commenter)
 
 	if !validReview {
@@ -109,20 +113,11 @@ func (bot *robot) isValidReview(
 
 		bot.client.CreatePRComment(
 			org, repo, info.getNumber(),
-			giteeclient.GenResponseWithReference(e, s),
+			giteeclient.GenResponseWithReference(e.NoteEvent, s),
 		)
 	}
 
 	return cmd, validReview
-}
-
-func (bot *robot) newNoteEventInfo(e *sdk.NoteEvent) *noteEventInfo {
-	cmds := parseCommentCommands(e.GetComment().GetBody())
-
-	return &noteEventInfo{
-		NoteEvent: e,
-		cmds:      sets.NewString(cmds...),
-	}
 }
 
 type noteEventInfo struct {
@@ -130,8 +125,12 @@ type noteEventInfo struct {
 	cmds sets.String
 }
 
+func (n *noteEventInfo) getReviewCmd() []string {
+	return n.cmds.Intersection(validCmds).UnsortedList()
+}
+
 func (n *noteEventInfo) hasReviewCmd() bool {
-	return len(n.cmds.Intersection(validCmds)) > 0
+	return len(n.getReviewCmd()) > 0
 }
 
 func (n *noteEventInfo) hasCanReviewCmd() bool {
@@ -140,4 +139,18 @@ func (n *noteEventInfo) hasCanReviewCmd() bool {
 
 func (n *noteEventInfo) isCommentedByAuthor() bool {
 	return n.GetCommenter() == n.GetPRAuthor()
+}
+
+func (n *noteEventInfo) normalizedCommenter() string {
+	return normalizeLogin(n.GetCommenter())
+}
+
+func (n *noteEventInfo) checkReviewCmd(isValidCmd func(cmd, author string) bool) (
+	string, string,
+) {
+	author := n.normalizedCommenter()
+
+	return checkReviewCommand(n.getReviewCmd(), func(cmd string) bool {
+		return isValidCmd(cmd, author)
+	})
 }
