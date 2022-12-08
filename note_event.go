@@ -137,7 +137,7 @@ func (n *noteEventInfo) hasCanReviewCmd() bool {
 	return n.cmds.Has(cmdCanReview)
 }
 
-func (n *noteEventInfo) isCommentedByAuthor() bool {
+func (n *noteEventInfo) isCommentedByPRAuthor() bool {
 	return n.GetCommenter() == n.GetPRAuthor()
 }
 

@@ -7,7 +7,7 @@ import (
 
 //handleCanReviewComment handle the /can-review comment
 func (bot *robot) handleCanReviewComment(e *noteEventInfo, cfg *botConfig, log *logrus.Entry) error {
-	if !e.isCommentedByAuthor() {
+	if !e.isCommentedByPRAuthor() {
 		return nil
 	}
 
@@ -17,11 +17,8 @@ func (bot *robot) handleCanReviewComment(e *noteEventInfo, cfg *botConfig, log *
 		return nil
 	}
 
-	if !prInfo.hasLabel(cfg.CLALabel) {
-		tip := giteeclient.GenResponseWithReference(
-			e.NoteEvent, "Please, sign cla first",
-		)
-
+	f := func(tip string) error {
+		tip = giteeclient.GenResponseWithReference(e.NoteEvent, tip)
 		org, repo := prInfo.getOrgAndRepo()
 
 		return bot.client.CreatePRComment(
@@ -29,16 +26,14 @@ func (bot *robot) handleCanReviewComment(e *noteEventInfo, cfg *botConfig, log *
 		)
 	}
 
-	if label := cfg.CI.LabelForBasicCIPassed; !cfg.CI.NoCI && label != "" && !prInfo.hasLabel(label) {
-		tip := giteeclient.GenResponseWithReference(
-			e.NoteEvent, "The basic CI should pass first",
-		)
+	if !prInfo.hasLabel(cfg.CLALabel) {
+		return f("Please, sign cla first")
+	}
 
-		org, repo := prInfo.getOrgAndRepo()
+	label := cfg.CI.LabelForBasicCIPassed
 
-		return bot.client.CreatePRComment(
-			org, repo, prInfo.getNumber(), tip,
-		)
+	if !cfg.CI.NoCI && label != "" && !prInfo.hasLabel(label) {
+		return f("The basic CI should pass first")
 	}
 
 	return bot.readyToReview(prInfo, cfg, log)
