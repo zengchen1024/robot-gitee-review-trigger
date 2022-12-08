@@ -7,6 +7,7 @@ import (
 	"github.com/opensourceways/community-robot-lib/giteeclient"
 	sdk "github.com/opensourceways/go-gitee/gitee"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 func (bot *robot) processNoteEvent(e *sdk.NoteEvent, cfg *botConfig, log *logrus.Entry) error {
@@ -15,9 +16,20 @@ func (bot *robot) processNoteEvent(e *sdk.NoteEvent, cfg *botConfig, log *logrus
 	}
 
 	if e.IsCreatingCommentEvent() && e.GetCommenter() != bot.botName {
-		if cmds := parseReviewCommand(e.GetComment().GetBody()); len(cmds) > 0 {
-			return bot.handleReviewComment(e, cfg, log)
+		mr := multiError()
+		info := bot.newNoteEventInfo(e)
+
+		if info.hasReviewCmd() {
+			err := bot.handleReviewComment(e, cfg, log)
+			mr.AddError(err)
 		}
+
+		if info.hasCanReviewCmd() {
+			err := bot.handleCanReviewComment(info, cfg, log)
+			mr.AddError(err)
+		}
+
+		return mr.Err()
 	}
 
 	return bot.handleCIStatusComment(e, cfg, log)
@@ -102,4 +114,30 @@ func (bot *robot) isValidReview(
 	}
 
 	return cmd, validReview
+}
+
+func (bot *robot) newNoteEventInfo(e *sdk.NoteEvent) *noteEventInfo {
+	cmds := parseCommentCommands(e.GetComment().GetBody())
+
+	return &noteEventInfo{
+		NoteEvent: e,
+		cmds:      sets.NewString(cmds...),
+	}
+}
+
+type noteEventInfo struct {
+	*sdk.NoteEvent
+	cmds sets.String
+}
+
+func (n *noteEventInfo) hasReviewCmd() bool {
+	return len(n.cmds.Intersection(validCmds)) > 0
+}
+
+func (n *noteEventInfo) hasCanReviewCmd() bool {
+	return n.cmds.Has(cmdCanReview)
+}
+
+func (n *noteEventInfo) isCommentedByAuthor() bool {
+	return n.GetCommenter() == n.GetPRAuthor()
 }

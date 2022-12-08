@@ -14,6 +14,8 @@ const (
 	labelApproved      = "approved"
 	labelRequestChange = "request-change"
 
+	cmdCanReview = "CAN-REVIEW"
+
 	cmdLGTM    = "LGTM"
 	cmdLBTM    = "LBTM"
 	cmdAPPROVE = "APPROVE"
@@ -40,15 +42,28 @@ func canApplyCmd(cmd string, isPRAuthor, isApprover, allowSelfApprove bool) bool
 	return true
 }
 
-func parseReviewCommand(comment string) []string {
-	r := []string{}
-	for _, match := range commandRegex.FindAllStringSubmatch(comment, -1) {
-		cmd := strings.ToUpper(match[1])
+func parseReviewCommand(comment string) (r []string) {
+	v := parseCommentCommands(comment)
+	if len(v) == 0 {
+		return
+	}
+
+	r = make([]string, 0, len(v))
+	for _, cmd := range v {
 		if validCmds.Has(cmd) {
 			r = append(r, cmd)
 		}
 	}
-	return r
+
+	return
+}
+
+func parseCommentCommands(comment string) (r []string) {
+	for _, match := range commandRegex.FindAllStringSubmatch(comment, -1) {
+		r = append(r, strings.ToUpper(match[1]))
+	}
+
+	return
 }
 
 type reviewSummary struct {
