@@ -19,6 +19,10 @@ type ciConfig struct {
 	// LabelForCIPassed is the label name for org/repos indicating
 	// the CI test cases have passed
 	LabelForCIPassed string `json:"label_for_ci_passed,omitempty"`
+
+	// LabelForBasicCIPassed is the label name for org/repos indicating
+	// the basic CI test cases have passed
+	LabelForBasicCIPassed string `json:"label_for_basic_ci_passed,omitempty"`
 }
 
 func (c *ciConfig) setDefault() {}

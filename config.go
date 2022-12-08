@@ -78,6 +78,8 @@ type botConfig struct {
 
 	Review reviewConfig `json:"review"`
 
+	CLALabel string `json:"cla_label" required:"true"`
+
 	// NeedWelcome specifies whether to add welcome comment.
 	NeedWelcome bool `json:"need_welcome,omitempty"`
 
