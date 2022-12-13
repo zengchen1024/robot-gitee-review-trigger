@@ -14,6 +14,8 @@ type configuration struct {
 
 	// Doc describes useful information about review process of PR.
 	Doc string `json:"doc" required:"true"`
+
+	Maintainers map[string][]string `json:"maintainers" required:"true"`
 }
 
 func (c *configuration) configFor(org, repo string) *botConfig {
@@ -29,6 +31,7 @@ func (c *configuration) configFor(org, repo string) *botConfig {
 
 	if i := config.Find(org, repo, v); i >= 0 {
 		items[i].doc = c.Doc
+		items[i].maintainers = c.Maintainers[org+"/"+repo]
 		items[i].commandsEndpoint = c.CommandsEndpoint
 
 		return &items[i]
@@ -83,8 +86,9 @@ type botConfig struct {
 	// NeedWelcome specifies whether to add welcome comment.
 	NeedWelcome bool `json:"need_welcome,omitempty"`
 
-	doc              string `json:"-"`
-	commandsEndpoint string `json:"-"`
+	doc              string   `json:"-"`
+	maintainers      []string `json:"-"`
+	commandsEndpoint string   `json:"-"`
 }
 
 func (c *botConfig) setDefault() {

@@ -37,32 +37,14 @@ func (pr prInfoOnPREvent) getHeadSHA() string {
 }
 
 func (bot *robot) processPREvent(e *sdk.PullRequestEvent, cfg *botConfig, log *logrus.Entry) error {
-	canReview := cfg.CI.NoCI
-
 	switch sdk.GetPullRequestAction(e) {
 	case sdk.PRActionOpened:
-		mr := multiError()
-		pr := prInfoOnPREvent{e}
-
 		if cfg.NeedWelcome {
-			if err := bot.welcome(pr, cfg); err != nil {
-				mr.Add(fmt.Sprintf("add welcome comment, err:%s", err.Error()))
-			}
+			return bot.welcome(prInfoOnPREvent{e}, cfg)
 		}
-
-		if canReview {
-			if err := bot.readyToReview(pr, cfg, log); err != nil {
-				mr.AddError(err)
-			}
-		}
-		return mr.Err()
 
 	case sdk.PRActionChangedSourceBranch:
-		var toKeep []string
-		if canReview {
-			toKeep = append(toKeep, labelCanReview)
-		}
-		return bot.resetToReview(prInfoOnPREvent{e}, cfg, toKeep, log)
+		return bot.resetToReview(prInfoOnPREvent{e}, cfg, nil, log)
 	}
 
 	return nil
@@ -71,16 +53,25 @@ func (bot *robot) processPREvent(e *sdk.PullRequestEvent, cfg *botConfig, log *l
 func (bot *robot) welcome(pr iPRInfo, cfg *botConfig) error {
 	org, repo := pr.getOrgAndRepo()
 
+	s := ""
+	if len(cfg.maintainers) > 0 {
+		s = fmt.Sprintf(
+			"\n\nThese two maintainer(%s) will help you to merge this pull-request.\n\n",
+			strings.Join(cfg.maintainers, ","),
+		)
+	}
+
 	return bot.client.CreatePRComment(
 		org, repo, pr.getNumber(),
 		fmt.Sprintf(
 			`
-Thank your for your pull-request.
+Thank you for your pull-request.%s
 
 The full list of commands accepted by me can be found at [**here**](%s).
 
 %s
 `,
+			s,
 			cfg.commandsEndpoint,
 			cfg.doc,
 		),
@@ -141,10 +132,6 @@ func (bot *robot) resetToReview(pr iPRInfo, cfg *botConfig, toKeep []string, log
 
 	if err := bot.deleteReviewNotification(pr); err != nil {
 		mr.Add(fmt.Sprintf("delete tips, err:%s", err.Error()))
-	}
-
-	if err := bot.addReviewNotification(pr, cfg, log); err != nil {
-		mr.AddError(err)
 	}
 
 	return mr.Err()
