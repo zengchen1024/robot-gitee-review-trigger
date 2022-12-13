@@ -69,14 +69,13 @@ func (bot *robot) handleReviewComment(e *noteEventInfo, cfg *botConfig, log *log
 		return err
 	}
 
-	canReview := cfg.CI.NoCI || stats.pr.info.hasLabel(cfg.CI.LabelForCIPassed)
 	pa := PostAction{
 		c:                bot.client,
 		cfg:              cfg,
 		owner:            owner,
 		log:              log,
 		pr:               &pr,
-		isStartingReview: canReview,
+		isStartingReview: stats.pr.info.hasLabel(labelCanReview),
 	}
 
 	oldTips := info.reviewGuides(bot.botName)
