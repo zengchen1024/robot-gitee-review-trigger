@@ -80,6 +80,23 @@ func (p pullRequest) areAllFilesApproved(agreedApprovers []string, num int) bool
 	return true
 }
 
+func (p pullRequest) unApprovedFiles(agreedApprovers []string, num int) []string {
+	if len(agreedApprovers) == 0 {
+		return p.files
+	}
+
+	r := make([]string, 0, len(p.files))
+	records := p.stats(agreedApprovers)
+
+	for _, f := range p.files {
+		if records[f] < num {
+			r = append(r, f)
+		}
+	}
+
+	return r
+}
+
 func (p pullRequest) stats(agreedApprovers []string) map[string]int {
 	r := map[string]int{}
 	for _, a := range agreedApprovers {

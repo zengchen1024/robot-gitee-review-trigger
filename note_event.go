@@ -15,29 +15,29 @@ func (bot *robot) processNoteEvent(e *sdk.NoteEvent, cfg *botConfig, log *logrus
 		return nil
 	}
 
-	if e.IsCreatingCommentEvent() && e.GetCommenter() != bot.botName {
-		cmds := parseCommentCommands(e.GetComment().GetBody())
-		info := &noteEventInfo{
-			NoteEvent: e,
-			cmds:      sets.NewString(cmds...),
-		}
-
-		mr := multiError()
-
-		if info.hasReviewCmd() {
-			err := bot.handleReviewComment(info, cfg, log)
-			mr.AddError(err)
-		}
-
-		if info.hasCanReviewCmd() {
-			err := bot.handleCanReviewComment(info, cfg, log)
-			mr.AddError(err)
-		}
-
-		return mr.Err()
+	if !e.IsCreatingCommentEvent() || e.GetCommenter() == bot.botName {
+		return nil
 	}
 
-	return bot.handleCIStatusComment(e, cfg, log)
+	cmds := parseCommentCommands(e.GetComment().GetBody())
+	info := &noteEventInfo{
+		NoteEvent: e,
+		cmds:      sets.NewString(cmds...),
+	}
+
+	mr := multiError()
+
+	if info.hasReviewCmd() {
+		err := bot.handleReviewComment(info, cfg, log)
+		mr.AddError(err)
+	}
+
+	if info.hasCanReviewCmd() {
+		err := bot.handleCanReviewComment(info, cfg, log)
+		mr.AddError(err)
+	}
+
+	return mr.Err()
 }
 
 func (bot *robot) handleReviewComment(e *noteEventInfo, cfg *botConfig, log *logrus.Entry) error {
