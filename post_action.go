@@ -243,13 +243,14 @@ func (pa PostAction) suggestApprovers(currentApprovers []string) []string {
 }
 
 func (pa PostAction) relevantOwnersFiles(currentApprovers []string) []string {
-	files := pa.pr.unApprovedFiles(currentApprovers, pa.cfg.Review.NumberOfApprovers)
+	// Pass pa.cfg.Review.TotalNumberOfApprovers instead of pa.cfg.Review.NumberOfApprovers
+	// Because it can cover all the case that it can't add label of approve.
+	files := pa.pr.unApprovedFiles(currentApprovers, pa.cfg.Review.TotalNumberOfApprovers)
 	if len(files) == 0 {
 		return nil
 	}
 
 	m := make(map[string]bool)
-
 	for _, f := range files {
 		if v := pa.owner.FindApproverOwnersForFile(f); !m[v] {
 			m[v] = true
