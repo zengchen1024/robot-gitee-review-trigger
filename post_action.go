@@ -176,11 +176,13 @@ func (pa PostAction) lgtm(p *actionParameter) error {
 	needSuggestApprover := oldTips == "" || !containsSuggestedApprover(oldTips) || lastComment == cmdAPPROVE
 
 	var sa []string
+	var ownersFiles []string
 	if needSuggestApprover {
 		sa = pa.suggestApprovers(p.n.rs.agreedApprovers)
+		ownersFiles = pa.relevantOwnersFiles(p.n.rs.agreedApprovers)
 	}
 
-	s := p.n.lgtmComment(sa)
+	s := p.n.lgtmComment(sa, ownersFiles)
 	if err := p.writeNotification(s); err != nil {
 		mr.AddError(err)
 	}
@@ -238,6 +240,30 @@ func (pa PostAction) suggestApprovers(currentApprovers []string) []string {
 	}.suggestApprover(
 		currentApprovers, pa.pr.assignees, pa.log,
 	)
+}
+
+func (pa PostAction) relevantOwnersFiles(currentApprovers []string) []string {
+	files := pa.pr.unApprovedFiles(currentApprovers, pa.cfg.Review.NumberOfApprovers)
+	if len(files) == 0 {
+		return nil
+	}
+
+	m := make(map[string]bool)
+
+	for _, f := range files {
+		if v := pa.owner.FindApproverOwnersForFile(f); !m[v] {
+			m[v] = true
+		}
+	}
+
+	i := 0
+	r := make([]string, len(m))
+	for k := range m {
+		r[i] = k
+		i++
+	}
+
+	return r
 }
 
 func (pa PostAction) suggestReviewers() []string {

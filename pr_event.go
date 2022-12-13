@@ -56,7 +56,7 @@ func (bot *robot) welcome(pr iPRInfo, cfg *botConfig) error {
 	s := ""
 	if len(cfg.maintainers) > 0 {
 		s = fmt.Sprintf(
-			"\n\nThese two maintainer(%s) will help you to merge this pull-request.\n\n",
+			"\n\n**%s** will help you to merge this pull-request.\n\n",
 			strings.Join(cfg.maintainers, ","),
 		)
 	}

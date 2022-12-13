@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -34,11 +35,22 @@ type notificationComment struct {
 	botName string
 }
 
-func (n notificationComment) genApproveTips(num int, approvers []string) string {
+func (n notificationComment) genApproveTips(num int, approvers, ownersFiles []string) string {
+	of := ""
+	if len(ownersFiles) > 0 {
+		sort.Strings(ownersFiles)
+
+		of = fmt.Sprintf(
+			"\nThe relevant OWNERS files are as bellow.\n%s\n",
+			strings.Join(ownersFiles, "\n"),
+		)
+	}
+
 	return fmt.Sprintf(
-		"%s, it still needs **%d** approvers to comment /approve.\nI suggest these approvers( %s ) to approve your PR.\nYou can assign the PR to them by writing a comment like this `/assign @%s`. Please, replace `%s` with the correct approver's name.",
+		"%s, it still needs **%d** approvers to comment /approve.%s\nI suggest these approvers( %s ) to approve your PR.\nYou can assign the PR to them by writing a comment like this `/assign @%s`. Please, replace `%s` with the correct approver's name.",
 		notificationApprovePart2,
 		num,
+		of,
 		toReviewerList(approvers),
 		n.botName,
 		n.botName,
@@ -138,13 +150,13 @@ func (n notificationComment) approvedComment(num int, suggestedReviewers []strin
 	)
 }
 
-func (n notificationComment) lgtmComment(suggestedApprovers []string) string {
+func (n notificationComment) lgtmComment(suggestedApprovers, ownersFiles []string) string {
 	s := n.reviewInfo()
 	if s != "" {
 		s = notificationLineSpliter + s
 	}
 
-	s1 := n.getPart2OfApproved(suggestedApprovers)
+	s1 := n.getPart2OfApproved(suggestedApprovers, ownersFiles)
 
 	return fmt.Sprintf(
 		"%s %s. In order to pass review, it still needs **approved** label.%s%s",
@@ -176,9 +188,9 @@ func (n notificationComment) reviewInfo() string {
 	return s + s1
 }
 
-func (n notificationComment) getPart2OfApproved(suggestedApprovers []string) string {
+func (n notificationComment) getPart2OfApproved(suggestedApprovers, ownersFiles []string) string {
 	if num := len(suggestedApprovers); num > 0 {
-		return n.genPart2(n.genApproveTips(num, suggestedApprovers))
+		return n.genPart2(n.genApproveTips(num, suggestedApprovers, ownersFiles))
 	}
 
 	if !containsSuggestedApprover(n.oldTips) {
