@@ -134,9 +134,9 @@ func (pr prInfoOnNoteEvent) getHeadSHA() string {
 }
 
 func (pr prInfoOnNoteEvent) getUrl() string {
-	return pr.e.GetURL()
+	return pr.e.GetPullRequest().GetHtmlURL()
 }
 
 func (pr prInfoOnNoteEvent) getTitle() string {
-	return pr.e.GetTitle()
+	return pr.e.GetPullRequest().GetTitle()
 }

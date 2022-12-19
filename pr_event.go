@@ -37,11 +37,11 @@ func (pr prInfoOnPREvent) getHeadSHA() string {
 }
 
 func (pr prInfoOnPREvent) getUrl() string {
-	return pr.e.GetURL()
+	return pr.e.GetPullRequest().GetHtmlURL()
 }
 
 func (pr prInfoOnPREvent) getTitle() string {
-	return pr.e.GetTitle()
+	return pr.e.GetPullRequest().GetTitle()
 }
 
 func (bot *robot) processPREvent(e *sdk.PullRequestEvent, cfg *botConfig, log *logrus.Entry) error {
