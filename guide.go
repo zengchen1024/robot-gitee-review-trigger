@@ -47,9 +47,8 @@ func (n notificationComment) genApproveTips(num int, approvers, ownersFiles []st
 	}
 
 	return fmt.Sprintf(
-		"%s, it still needs **%d** approvers to comment /approve.%s\nI suggest these approvers( %s ) to approve your PR.\nYou can assign the PR to them by writing a comment like this `/assign @%s`. Please, replace `%s` with the correct approver's name.",
+		"%s, it still needs approvers to comment /approve.%s\nI suggest these approvers( %s ) to approve your PR.\nYou can assign the PR to them by writing a comment like this `/assign @%s`. Please, replace `%s` with the correct approver's name.",
 		notificationApprovePart2,
-		num,
 		of,
 		toReviewerList(approvers),
 		n.botName,

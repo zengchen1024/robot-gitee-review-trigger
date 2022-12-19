@@ -270,7 +270,9 @@ func (pa PostAction) relevantOwnersFiles(currentApprovers []string) []string {
 func (pa PostAction) suggestReviewers() []string {
 	v, err := suggestReviewers(
 		pa.c, pa.owner, pa.pr.info,
-		pa.cfg.Review.TotalNumberOfReviewers, pa.log,
+		pa.cfg.Review.TotalNumberOfReviewers,
+		pa.cfg.Review.EnpointToRecommendReviewer,
+		pa.log,
 	)
 	if err != nil {
 		pa.log.Error(err)
