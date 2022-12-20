@@ -30,7 +30,7 @@ func (bot *robot) handleCanReviewComment(e *noteEventInfo, cfg *botConfig, log *
 		return f("Please, sign cla first")
 	}
 
-	if l := cfg.LabelForBasicCIPassed; l != "" && !prInfo.hasLabel(l) {
+	if l := cfg.LabelsForBasicCIPassed; len(l) > 0 && !prInfo.hasAnyLabel(l) {
 		return f("The basic CI should pass first")
 	}
 

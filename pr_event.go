@@ -28,6 +28,11 @@ func (pr prInfoOnPREvent) getTargetBranch() string {
 func (pr prInfoOnPREvent) hasLabel(l string) bool {
 	return pr.e.GetPRLabelSet().Has(l)
 }
+
+func (pr prInfoOnPREvent) hasAnyLabel(l []string) bool {
+	return pr.e.GetPRLabelSet().HasAny(l...)
+}
+
 func (pr prInfoOnPREvent) getAuthor() string {
 	return pr.e.GetPRAuthor()
 }
