@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"math/rand"
 	"net/http"
 	"sort"
@@ -172,13 +173,15 @@ func recommendReviewers(endpoint string, reviewers []string, pr iPRInfo) ([]stri
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "robot-gitee-review-trigger")
 
-	res := new(reviewerRecommendResp)
+	v := new(reviewerRecommendResp)
 	cli := utils.HttpClient{MaxRetries: 3}
-	if err = cli.ForwardTo(req, res); err != nil {
+	if err = cli.ForwardTo(req, v); err != nil {
 		return nil, err
 	}
+	if v.Code != 200 {
+		return nil, errors.New(v.Msg)
+	}
 
-	return res.Data, nil
+	return v.Data, nil
 }
