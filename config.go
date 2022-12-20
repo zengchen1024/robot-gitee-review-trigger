@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/opensourceways/community-robot-lib/config"
 )
@@ -49,11 +49,7 @@ func (c *configuration) Validate() error {
 	}
 
 	if c.CommandsEndpoint == "" {
-		return fmt.Errorf("missing commands_endpoint")
-	}
-
-	if c.Doc == "" {
-		return fmt.Errorf("missing doc")
+		return errors.New("missing commands_endpoint")
 	}
 
 	items := c.ConfigItems
@@ -105,6 +101,10 @@ func (c *botConfig) setDefault() {
 func (c *botConfig) validate() error {
 	if c == nil {
 		return nil
+	}
+
+	if c.CLALabel == "" {
+		return errors.New("missing cla_label")
 	}
 
 	if err := c.Review.validate(); err != nil {
