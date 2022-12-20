@@ -36,6 +36,14 @@ func (pr prInfoOnPREvent) getHeadSHA() string {
 	return pr.e.GetPRHeadSha()
 }
 
+func (pr prInfoOnPREvent) getUrl() string {
+	return pr.e.GetPullRequest().GetHtmlURL()
+}
+
+func (pr prInfoOnPREvent) getTitle() string {
+	return pr.e.GetPullRequest().GetTitle()
+}
+
 func (bot *robot) processPREvent(e *sdk.PullRequestEvent, cfg *botConfig, log *logrus.Entry) error {
 	switch sdk.GetPullRequestAction(e) {
 	case sdk.PRActionOpened:
@@ -109,7 +117,11 @@ func (bot *robot) addReviewNotification(pr iPRInfo, cfg *botConfig, log *logrus.
 		return err
 	}
 
-	reviewers, err := suggestReviewers(bot.client, owner, pr, cfg.Review.TotalNumberOfReviewers, log)
+	reviewers, err := suggestReviewers(
+		bot.client, owner, pr,
+		cfg.Review.TotalNumberOfReviewers,
+		cfg.Review.EnpointToRecommendReviewer, log,
+	)
 	if err != nil {
 		return fmt.Errorf("suggest reviewers, err: %s", err.Error())
 	}

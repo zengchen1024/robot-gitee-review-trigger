@@ -16,6 +16,8 @@ type reviewConfig struct {
 	// TotalNumberOfReviewers is the min number of reviewers who commented
 	// /lgtm at same time to add lgtm label
 	TotalNumberOfReviewers int `json:"total_number_of_reviewers"`
+
+	EnpointToRecommendReviewer string `json:"endpoint_to_recommend_reviewer"`
 }
 
 func (r reviewConfig) validate() error {

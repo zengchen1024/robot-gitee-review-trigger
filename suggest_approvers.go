@@ -19,7 +19,12 @@ func (p suggestingApprover) selectApprovers(as []string, n int) []string {
 		excluded.Delete(p.pr.prAuthor())
 	}
 
-	return getReviewers(fakeReviewersClient{s: &p}, p.pr.files, n, excluded)
+	v := retrieveReviewers(fakeReviewersClient{s: &p}, p.pr.files, n, excluded)
+	if len(v) <= n {
+		return v
+	}
+
+	return selectReviewer(v, n)
 }
 
 func (p suggestingApprover) filterApprover(assignees []string) []string {
