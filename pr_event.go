@@ -69,19 +69,24 @@ func (bot *robot) welcome(pr iPRInfo, cfg *botConfig) error {
 		)
 	}
 
+	doc := ""
+	if cfg.doc != "" {
+		doc = fmt.Sprintf("\n\n%s.", cfg.doc)
+	}
+
 	return bot.client.CreatePRComment(
 		org, repo, pr.getNumber(),
 		fmt.Sprintf(
 			`
 Thank you for your pull-request.%s
 
-The full list of commands accepted by me can be found at [**here**](%s).
+You can comment **/can-review** to start reviewing when the pr is ready.
 
-%s
+The full list of commands accepted by me can be found at [**here**](%s).%s
 `,
 			s,
 			cfg.commandsEndpoint,
-			cfg.doc,
+			doc,
 		),
 	)
 }
