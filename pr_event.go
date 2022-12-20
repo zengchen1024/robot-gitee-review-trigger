@@ -125,7 +125,7 @@ func (bot *robot) addReviewNotification(pr iPRInfo, cfg *botConfig, log *logrus.
 	reviewers, err := suggestReviewers(
 		bot.client, owner, pr,
 		cfg.Review.TotalNumberOfReviewers,
-		cfg.Review.EnpointToRecommendReviewer, log,
+		cfg.Review.EndpointToRecommendReviewer, log,
 	)
 	if err != nil {
 		return fmt.Errorf("suggest reviewers, err: %s", err.Error())

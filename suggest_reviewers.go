@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/opensourceways/community-robot-lib/utils"
 	"github.com/opensourceways/repo-owners-cache/repoowners"
@@ -115,6 +116,9 @@ func selectReviewer(list []string, n int) []string {
 	if ln <= n || n <= 0 {
 		return list
 	}
+
+	// set seed
+	rand.Seed(time.Now().UnixNano())
 
 	for i := 0; i < n; i++ {
 		j := rand.Intn(ln - i)

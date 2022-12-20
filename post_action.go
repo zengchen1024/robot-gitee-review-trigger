@@ -271,7 +271,7 @@ func (pa PostAction) suggestReviewers() []string {
 	v, err := suggestReviewers(
 		pa.c, pa.owner, pa.pr.info,
 		pa.cfg.Review.TotalNumberOfReviewers,
-		pa.cfg.Review.EnpointToRecommendReviewer,
+		pa.cfg.Review.EndpointToRecommendReviewer,
 		pa.log,
 	)
 	if err != nil {
