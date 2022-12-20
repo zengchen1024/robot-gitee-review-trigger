@@ -19,10 +19,6 @@ type ciConfig struct {
 	// LabelForCIPassed is the label name for org/repos indicating
 	// the CI test cases have passed
 	LabelForCIPassed string `json:"label_for_ci_passed,omitempty"`
-
-	// LabelForBasicCIPassed is the label name for org/repos indicating
-	// the basic CI test cases have passed
-	LabelForBasicCIPassed string `json:"label_for_basic_ci_passed,omitempty"`
 }
 
 func (c *ciConfig) setDefault() {}
@@ -60,7 +56,7 @@ func canHandleCIEvent(e *gitee.NoteEvent, cfg ciConfig) (bool, error) {
 }
 
 func (bot *robot) handleCIStatusComment(e *gitee.NoteEvent, cfg *botConfig, log *logrus.Entry) error {
-	if b, err := canHandleCIEvent(e, cfg.CI); !b {
+	if b, err := canHandleCIEvent(e, ciConfig{}); !b {
 		return err
 	}
 

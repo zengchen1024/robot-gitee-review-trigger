@@ -17,7 +17,7 @@ type reviewConfig struct {
 	// /lgtm at same time to add lgtm label
 	TotalNumberOfReviewers int `json:"total_number_of_reviewers"`
 
-	EnpointToRecommendReviewer string `json:"endpoint_to_recommend_reviewer"`
+	EndpointToRecommendReviewer string `json:"endpoint_to_recommend_reviewer"`
 }
 
 func (r reviewConfig) validate() error {
