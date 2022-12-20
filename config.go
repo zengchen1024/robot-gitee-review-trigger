@@ -80,9 +80,9 @@ type botConfig struct {
 
 	CLALabel string `json:"cla_label" required:"true"`
 
-	// LabelForBasicCIPassed is the label name for org/repos indicating
+	// LabelsForBasicCIPassed is the label name for org/repos indicating
 	// the basic CI test cases have passed
-	LabelForBasicCIPassed string `json:"label_for_basic_ci_passed,omitempty"`
+	LabelsForBasicCIPassed []string `json:"labels_for_basic_ci_passed,omitempty"`
 
 	// NeedWelcome specifies whether to add welcome comment.
 	NeedWelcome bool `json:"need_welcome,omitempty"`

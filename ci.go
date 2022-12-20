@@ -121,6 +121,11 @@ func (pr prInfoOnNoteEvent) getTargetBranch() string {
 func (pr prInfoOnNoteEvent) hasLabel(l string) bool {
 	return pr.e.GetPRLabelSet().Has(l)
 }
+
+func (pr prInfoOnNoteEvent) hasAnyLabel(l []string) bool {
+	return pr.e.GetPRLabelSet().HasAny(l...)
+}
+
 func (pr prInfoOnNoteEvent) getAuthor() string {
 	return pr.e.GetPRAuthor()
 }
