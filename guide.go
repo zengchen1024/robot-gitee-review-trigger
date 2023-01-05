@@ -41,8 +41,8 @@ func (n notificationComment) genApproveTips(num int, approvers, ownersFiles []st
 		sort.Strings(ownersFiles)
 
 		of = fmt.Sprintf(
-			"\nThe relevant OWNERS files are as bellow.\n%s\n",
-			strings.Join(ownersFiles, "\n"),
+			"\nThe relevant OWNERS files are as bellow.\n- %s\n",
+			strings.Join(ownersFiles, "\n- "),
 		)
 	}
 
