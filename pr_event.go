@@ -57,7 +57,7 @@ func (bot *robot) processPREvent(e *sdk.PullRequestEvent, cfg *botConfig, log *l
 		}
 
 	case sdk.PRActionChangedSourceBranch:
-		return bot.resetToReview(prInfoOnPREvent{e}, cfg, nil, log)
+		return bot.resetToReview(prInfoOnPREvent{e}, cfg, log)
 	}
 
 	return nil
@@ -145,10 +145,10 @@ func (bot *robot) addReviewNotification(pr iPRInfo, cfg *botConfig, log *logrus.
 	return bot.client.CreatePRComment(org, repo, pr.getNumber(), s)
 }
 
-func (bot *robot) resetToReview(pr iPRInfo, cfg *botConfig, toKeep []string, log *logrus.Entry) error {
+func (bot *robot) resetToReview(pr iPRInfo, cfg *botConfig, log *logrus.Entry) error {
 	mr := multiError()
 
-	if err := bot.resetLabels(pr, cfg, toKeep); err != nil {
+	if err := bot.resetLabels(pr, cfg); err != nil {
 		mr.Add(fmt.Sprintf("remove label when source code changed, err:%s", err.Error()))
 	}
 
@@ -159,8 +159,11 @@ func (bot *robot) resetToReview(pr iPRInfo, cfg *botConfig, toKeep []string, log
 	return mr.Err()
 }
 
-func (bot *robot) resetLabels(pr iPRInfo, cfg *botConfig, toKeep []string) error {
-	rmls, err := removeLabels(bot.client, pr)
+func (bot *robot) resetLabels(pr iPRInfo, cfg *botConfig) error {
+	l := labelUpdating{c: bot.client, pr: pr}
+	rmls, err := l.removeLabels([]string{
+		labelApproved, labelLGTM, labelRequestChange, labelCanReview,
+	})
 	if err != nil {
 		return err
 	}
@@ -193,12 +196,4 @@ func (bot *robot) deleteReviewNotification(pr iPRInfo) error {
 	}
 
 	return nil
-}
-
-func removeLabels(c ghclient, pr iPRInfo) ([]string, error) {
-	l := labelUpdating{c: c, pr: pr}
-
-	return l.removeLabels([]string{
-		labelApproved, labelLGTM, labelRequestChange, labelCanReview,
-	})
 }
