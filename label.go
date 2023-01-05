@@ -21,7 +21,7 @@ func updateAndReturnRemovedLabels(c ghclient, pr iPRInfo, keep ...string) ([]str
 		mr.AddError(err)
 	}
 
-	all := sets.NewString(labelApproved, labelLGTM, labelCanReview, labelRequestChange)
+	all := sets.NewString(labelApproved, labelLGTM, labelRequestChange)
 
 	toRemove := all.Delete(keep...).UnsortedList()
 

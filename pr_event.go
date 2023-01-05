@@ -160,7 +160,7 @@ func (bot *robot) resetToReview(pr iPRInfo, cfg *botConfig, toKeep []string, log
 }
 
 func (bot *robot) resetLabels(pr iPRInfo, cfg *botConfig, toKeep []string) error {
-	rmls, err := updateAndReturnRemovedLabels(bot.client, pr, toKeep...)
+	rmls, err := removeLabels(bot.client, pr)
 	if err != nil {
 		return err
 	}
@@ -193,4 +193,12 @@ func (bot *robot) deleteReviewNotification(pr iPRInfo) error {
 	}
 
 	return nil
+}
+
+func removeLabels(c ghclient, pr iPRInfo) ([]string, error) {
+	l := labelUpdating{c: c, pr: pr}
+
+	return l.removeLabels([]string{
+		labelApproved, labelLGTM, labelRequestChange, labelCanReview,
+	})
 }
