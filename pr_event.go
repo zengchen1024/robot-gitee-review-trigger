@@ -216,21 +216,32 @@ func (bot *robot) commentAfterCI(pr iPRInfo, cfg *botConfig) error {
 		return err
 	}
 
-	for _, log := range logs {
+	var log *sdk.OperateLog
+
+	for i := range logs {
+		c := logs[i].Content
+
 		for _, label := range cfg.LabelsForBasicCIPassed {
-			if !strings.Contains(log.Content, label) {
-				continue
-			}
+			if strings.Contains(c, label) {
+				log = &logs[i]
 
-			if log.ActionType != sdk.ActionAddLabel {
-				return nil
+				break
 			}
+		}
 
-			return bot.client.CreatePRComment(org, repo, pr.getNumber(),
-				"You can comment **/can-review** to start reviewing, the pr is ready",
-			)
+		if log != nil {
+			break
 		}
 	}
 
-	return nil
+	if log == nil || log.ActionType != sdk.ActionAddLabel {
+		return nil
+	}
+
+	c := fmt.Sprintf(
+		"@%s, You can comment **/can-review** to start reviewing if the pr is ready.\nIf the **can-review** label is not added, you can comment it repeatly.",
+		pr.getAuthor(),
+	)
+
+	return bot.client.CreatePRComment(org, repo, pr.getNumber(), c)
 }
