@@ -51,13 +51,16 @@ func (pr prInfoOnPREvent) getTitle() string {
 
 func (bot *robot) processPREvent(e *sdk.PullRequestEvent, cfg *botConfig, log *logrus.Entry) error {
 	switch sdk.GetPullRequestAction(e) {
-	case sdk.PRActionOpened:
+	case sdk.ActionOpen:
 		if cfg.NeedWelcome {
 			return bot.welcome(prInfoOnPREvent{e}, cfg)
 		}
 
 	case sdk.PRActionChangedSourceBranch:
 		return bot.resetToReview(prInfoOnPREvent{e}, cfg, log)
+
+	case sdk.PRActionUpdatedLabel:
+		return bot.commentAfterCI(prInfoOnPREvent{e}, cfg)
 	}
 
 	return nil
@@ -193,6 +196,40 @@ func (bot *robot) deleteReviewNotification(pr iPRInfo) error {
 	cs := giteeclient.FindBotComment(comments, bot.botName, isNotificationComment)
 	for _, c := range cs {
 		_ = bot.client.DeletePRComment(org, repo, c.CommentID)
+	}
+
+	return nil
+}
+
+func (bot *robot) commentAfterCI(pr iPRInfo, cfg *botConfig) error {
+	if pr.hasLabel(labelCanReview) {
+		return nil
+	}
+
+	if !pr.hasAnyLabel(cfg.LabelsForBasicCIPassed) {
+		return nil
+	}
+
+	org, repo := pr.getOrgAndRepo()
+	logs, err := bot.client.ListPROperationLogs(org, repo, pr.getNumber())
+	if err != nil {
+		return err
+	}
+
+	for _, log := range logs {
+		for _, label := range cfg.LabelsForBasicCIPassed {
+			if !strings.Contains(log.Content, label) {
+				continue
+			}
+
+			if log.ActionType != sdk.ActionAddLabel {
+				return nil
+			}
+
+			return bot.client.CreatePRComment(org, repo, pr.getNumber(),
+				"You can comment **/can-review** to start reviewing, the pr is ready",
+			)
+		}
 	}
 
 	return nil
