@@ -178,6 +178,7 @@ type reviewResult struct {
 	isLGTM          bool
 	isLBTM          bool
 	needLGTMNum     int
+	needApproveNum  int
 	unApprovedFiles []string
 }
 
@@ -192,8 +193,14 @@ func genReviewResult(r reviewSummary, unApprovedFiles func([]string, int) []stri
 	an := len(r.agreedApprovers)
 
 	rr.unApprovedFiles = unApprovedFiles(r.agreedApprovers, cfg.NumberOfApprovers)
-	if len(rr.unApprovedFiles) == 0 {
-		rr.isApproved = an >= cfg.TotalNumberOfApprovers
+	if n := len(rr.unApprovedFiles); n == 0 {
+		if an >= cfg.TotalNumberOfApprovers {
+			rr.isApproved = true
+		} else {
+			rr.needApproveNum = cfg.TotalNumberOfApprovers - an
+		}
+	} else if n > 5 {
+		rr.unApprovedFiles = rr.unApprovedFiles[:5]
 	}
 
 	rn := an + len(r.agreedReviewers)
