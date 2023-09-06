@@ -94,7 +94,7 @@ func (pa PostAction) handle(param *actionParameter, r reviewResult) error {
 	}
 
 	if r.isLGTM {
-		return pa.lgtm(param)
+		return pa.lgtm(param, &r)
 	}
 
 	if r.isApproved {
@@ -159,7 +159,7 @@ func (pa PostAction) requestChange(p *actionParameter) error {
 	return mr.Err()
 }
 
-func (pa PostAction) lgtm(p *actionParameter) error {
+func (pa PostAction) lgtm(p *actionParameter, r *reviewResult) error {
 	mr := multiError()
 
 	if err := p.u(labelLGTM); err != nil {
@@ -175,14 +175,16 @@ func (pa PostAction) lgtm(p *actionParameter) error {
 	lastComment := p.lastComment
 	needSuggestApprover := oldTips == "" || !containsSuggestedApprover(oldTips) || lastComment == cmdAPPROVE
 
-	var sa []string
-	var ownersFiles []string
+	s := ""
 	if needSuggestApprover {
-		sa = pa.suggestApprovers(p.n.rs.agreedApprovers)
-		ownersFiles = pa.relevantOwnersFiles(p.n.rs.agreedApprovers)
+		sa := pa.suggestApprovers(p.n.rs.agreedApprovers)
+		ownersFiles := pa.relevantOwnersFiles(p.n.rs.agreedApprovers)
+
+		s = p.n.lgtmComment(sa, ownersFiles, r.unApprovedFiles)
+	} else {
+		s = p.n.lgtmComment(nil, nil, nil)
 	}
 
-	s := p.n.lgtmComment(sa, ownersFiles)
 	if err := p.writeNotification(s); err != nil {
 		mr.AddError(err)
 	}

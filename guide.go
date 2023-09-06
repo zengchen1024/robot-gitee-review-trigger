@@ -35,7 +35,7 @@ type notificationComment struct {
 	botName string
 }
 
-func (n notificationComment) genApproveTips(num int, approvers, ownersFiles []string) string {
+func (n notificationComment) genApproveTips(num int, approvers, ownersFiles, unApprovedFiles []string) string {
 	of := ""
 	if len(ownersFiles) > 0 {
 		sort.Strings(ownersFiles)
@@ -46,10 +46,20 @@ func (n notificationComment) genApproveTips(num int, approvers, ownersFiles []st
 		)
 	}
 
+	uf := ""
+	if len(unApprovedFiles) > 0 {
+		sort.Strings(unApprovedFiles)
+
+		uf = fmt.Sprintf(
+			"\nThe unapproved files are as bellow.\n- %s\n",
+			strings.Join(unApprovedFiles, "\n- "),
+		)
+	}
+
 	return fmt.Sprintf(
-		"%s, it still needs approvers to comment /approve.%s\nI suggest these approvers( %s ) to approve your PR.\nYou can assign the PR to them by writing a comment like this `/assign @%s`. Please, replace `%s` with the correct approver's name.",
+		"%s, it still needs approvers to comment /approve.%s%s\nI suggest these approvers( %s ) to approve your PR.\nYou can assign the PR to them by writing a comment like this `/assign @%s`. Please, replace `%s` with the correct approver's name.",
 		notificationApprovePart2,
-		of,
+		uf, of,
 		toReviewerList(approvers),
 		n.botName,
 		n.botName,
@@ -149,13 +159,13 @@ func (n notificationComment) approvedComment(num int, suggestedReviewers []strin
 	)
 }
 
-func (n notificationComment) lgtmComment(suggestedApprovers, ownersFiles []string) string {
+func (n notificationComment) lgtmComment(suggestedApprovers, ownersFiles, unApprovedFiles []string) string {
 	s := n.reviewInfo()
 	if s != "" {
 		s = notificationLineSpliter + s
 	}
 
-	s1 := n.getPart2OfApproved(suggestedApprovers, ownersFiles)
+	s1 := n.getPart2OfApproved(suggestedApprovers, ownersFiles, unApprovedFiles)
 
 	return fmt.Sprintf(
 		"%s %s. In order to pass review, it still needs **approved** label.%s%s",
@@ -187,9 +197,11 @@ func (n notificationComment) reviewInfo() string {
 	return s + s1
 }
 
-func (n notificationComment) getPart2OfApproved(suggestedApprovers, ownersFiles []string) string {
+func (n notificationComment) getPart2OfApproved(suggestedApprovers, ownersFiles, unApprovedFiles []string) string {
 	if num := len(suggestedApprovers); num > 0 {
-		return n.genPart2(n.genApproveTips(num, suggestedApprovers, ownersFiles))
+		return n.genPart2(
+			n.genApproveTips(num, suggestedApprovers, ownersFiles, unApprovedFiles),
+		)
 	}
 
 	if !containsSuggestedApprover(n.oldTips) {
